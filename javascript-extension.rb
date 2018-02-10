@@ -71,13 +71,8 @@ def getJSUsersStats(permission_coll, mongo_client)
     unless no_prod.nil?
       no_prod_perm = no_prod.merge(no_prod_perm) {|key, val1, val2| val1.to_a + val2.to_a}
     end
-
   end
-  puts "Total of number of users that have the #{JAVASCRIPT_EXTENSION_PERM_CONST} permission
-  across all accounts #{js_users.size}\n\n"
-  puts "This is the HASH that has all users across all accounts that have the #{JAVASCRIPT_EXTENSION_PERM_CONST} :
-  #{js_users}\n\n"
-  puts "THIS IS THE HASH FOR ALL USERS THAT DON'T HAVE THE #{PUBLISH_PROD_CONST} permission : #{no_prod_perm}"
+  getUsersJSStats(no_prod_perm, js_users)
 end
 
 def getAllPermissionCacheRecordsCount(permission_coll)
@@ -120,10 +115,20 @@ def getAllUsersWithJSPermissionNoProd(profile_list, email, account)
 
       profile_name = profile.fetch("profile")
       no_prod_perm[email].store(account, profile_name)
-
-      puts "HERE IS THE NO PROD PERMISSION INSPECT : #{no_prod_perm.inspect} \n\n"
       return no_prod_perm
     end
+end
+
+def getUsersJSStats(no_prod, js_users)
+  puts "Total of number of users that have the #{JAVASCRIPT_EXTENSION_PERM_CONST} permission
+  across all accounts #{js_users.size}\n\n"
+  puts "This is the HASH that has all users across all accounts that have the #{JAVASCRIPT_EXTENSION_PERM_CONST} :
+  #{js_users}\n\n"
+  puts "Totol of number of users that have the #{JAVASCRIPT_EXTENSION_PERM_CONST} permission but does not have the #{PUBLISH_PROD_CONST} permission: #{no_prod.size}\n\n"
+  puts "THIS IS THE HASH FOR ALL USERS THAT DON'T HAVE THE #{PUBLISH_PROD_CONST} permission : #{no_prod}\n\n"
+
+  puts "HERE IS HOW MANY USERS WILL BE AFFECTED BY ADDING THE NEW PERMISSION: #{no_prod.size}\n\n"
+
 end
 
 #this function will retrieves all the mongo configurations
@@ -151,6 +156,6 @@ if __FILE__ == $PROGRAM_NAME
   puts "Getting User's stats for the EXTENSIONS_JAVASCRIPT permission\n"
   getJSUsersStats(permission_coll, mongo_client)
 
-  puts "Done getting User's stats who have the EXTENSIONS_JAVASCRIPT permission\n"
+  puts "DONE WITH SCRIPT!!!!!!!\n"
   exit 0
 end
