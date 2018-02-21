@@ -119,9 +119,11 @@ end
 #this function will update the users permissions to reflect the new javascript permission
 def updateUsersPermissions(users_coll, email, account, profile)
   puts "Updating user: #{email} permission to include the new Profile level JavaScript permission\n"
-  javascript_perm = "tealium:accounts:" + account + ":profiles:" + profile + ":js_draft_promotion"
+  javascript_perm = ["tealium:accounts:" + account + ":profiles:" + profile + ":js_promotion:dev",
+                     "tealium:accounts:" + account + ":profiles:" + profile + ":js_promotion:qa",
+                     "tealium:accounts:" + account + ":profiles:" + profile + ":js_promotion:prod"]
   begin
-    result = users_coll.update_one( { :email => email }, { "$addToSet" => { :permissions => javascript_perm}})
+    result = users_coll.update_one( { :email => email }, { "$addToSet" => { :permissions => { "$each" => javascript_perm }}})
     raise Exception, "Fail to update user: #{email} for collection: #{users_coll}\n" unless result.n == 1
   rescue => e
     puts "FRACASAR: There was an error trying to update user: #{email} for collection: #{users_coll} Error: #{e}\n"
@@ -182,7 +184,7 @@ if __FILE__ == $PROGRAM_NAME
 
   puts "Creating new profile permission Script Finish \n"
   mongo_client.close
-  puts "Here is all the users that super user array found \n"
+  puts "Here is all the super users that the script found \n"
   puts $tealim_super_user
   exit 0
 end
