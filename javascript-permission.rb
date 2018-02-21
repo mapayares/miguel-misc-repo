@@ -6,7 +6,7 @@ require 'pry'
 require 'mongo'
 
 JAVASCRIPT_EXTENSION_PERM_CONST = "EXTENSIONS_JAVASCRIPT"
-JAVASCRIPT_PROFILE_PERM_CONST = "JS_DRAFT_PROMOTION"
+JAVASCRIPT_PROFILE_PERM_CONST = ["DEV_JS_PROMOTION", "QA_JS_PROMOTION", "PROD_JS_PROMOTION"]
 EMAIL_CONST = "email"
 $tealim_super_user = Array.new
 $star_permissions = ["tealium:accounts:*:read", "tealium:accounts:*:create", "tealium:accounts:*:profiles:*:create",
@@ -136,8 +136,8 @@ end
 def updatePermissionCache(permission_coll, email, account, profile)
   puts "Updating user: #{email} permission cache object to the new Profile leve JavaScript permission\n"
   begin
-    result = permission_coll.update_one( { :email => email, :account => account}, { "$addToSet" => {"profiles.#{profile}.permissions" =>
-      JAVASCRIPT_PROFILE_PERM_CONST} } )
+    result = permission_coll.update_one( { :email => email, :account => account}, { "$addToSet" => {"profiles.#{profile}.permissions" => {
+      "$each" => JAVASCRIPT_PROFILE_PERM_CONST} } } )
     raise Exception, "Fail to update user: #{email} for collection: #{permission_coll}\n" unless result.n == 1
   rescue => e
     puts "FRACASAR: There was an error trying to update user: #{email} for collection: #{permission_coll} Error: #{e}\n"
