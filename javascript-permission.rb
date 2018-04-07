@@ -123,8 +123,12 @@ def updateUsersPermissions(users_coll, email, account, profile)
                      "tealium:accounts:" + account + ":profiles:" + profile + ":js_promotion:qa",
                      "tealium:accounts:" + account + ":profiles:" + profile + ":js_promotion:prod"]
   begin
-    result = users_coll.update_one( { :email => email }, { "$addToSet" => { :permissions => { "$each" => javascript_perm }}})
-    raise Exception, "Fail to update user: #{email} for collection: #{users_coll}\n" unless result.n == 1
+    result = users_coll.find_one_and_update( { :email => email }, { "$addToSet" => { :permissions => { "$each" => javascript_perm }}}, :upsert => false)
+    if (result == nil)
+      "FAIL to update USER: #{email} for COLLECTION: #{users_coll}\n"
+    else
+      raise Exception, "Fail to update user: #{email} for collection: #{users_coll}\n" unless result.has_key?(:email)
+    end
   rescue => e
     puts "FRACASAR: There was an error trying to update user: #{email} for collection: #{users_coll} Error: #{e}\n"
     exit 1
