@@ -8,6 +8,7 @@ require 'mongo'
 JAVASCRIPT_EXTENSION_PERM_CONST = "EXTENSIONS_JAVASCRIPT"
 JAVASCRIPT_PROFILE_PERM_CONST = ["DEV_JS_PROMOTION", "QA_JS_PROMOTION", "PROD_JS_PROMOTION"]
 EMAIL_CONST = "email"
+TMP_JS_PERM_COLL = 'tmp_js_perm_coll'
 $tealim_super_user = Array.new
 $star_permissions = ["tealium:accounts:*:read", "tealium:accounts:*:create", "tealium:accounts:*:profiles:*:create",
   "tealium:accounts:*:profiles:*:edit", "tealium:accounts:*:profiles:*:manage_users", "tealium:accounts:*:edit",
@@ -60,24 +61,69 @@ def getMongoCoreDB(mongo_host, mongo_db, users, permission)
   return client, users_coll, permission_coll
 end
 
-def createNewPermission(users_coll, permission_coll)
-  puts "Querying get all users that need this new profile Javascript permission\n"
-  documents = permission_coll.find(:permissions => {"$in" => [JAVASCRIPT_EXTENSION_PERM_CONST]}).sort([EMAIL_CONST, 1])
+def createNewPermissionTTLColl(mongo_client, permission_coll)
+  puts "Checking if we need to create temporary JS PERM collection that expires all documents in 5 days\n"
+  ttl_needed = false
+  tmp_js_perm_coll = mongo_client[TMP_JS_PERM_COLL]
+  count = tmp_js_perm_coll.count
+  if (count == 0)
+    puts "Creating TTL index to expire all documents in 5 days\n"
+    tmp_js_perm_coll.indexes.create_one( {:expired_at => 1}, :expire_after_seconds => 2592000)
+    ttl_needed = true
+  end
 
-  documents.each do |doc|
-      email = doc.fetch(EMAIL_CONST)
-      profiles_obj = doc.fetch("profiles")
-      account = doc.fetch("account")
-      profiles_obj.each do |profiles|
-        profile = profiles.fetch(0)
-        if "*".eql?(profile)
-          updateStarUsers(users_coll, permission_coll, email, account, profile)
-        else
-          updateUsersPermissions(users_coll, email, account, profile)
-          updatePermissionCache(permission_coll, email, account, profile)
-        end
+  if (ttl_needed)
+    insertUsersPermNeeded(permission_coll, tmp_js_perm_coll)
+  end
+  return tmp_js_perm_coll
+end
+
+def insertUsersPermNeeded(permission_coll, tmp_js_perm_coll)
+  puts "Inserting all users that need this new js permission \n"
+  documents = permission_coll.find(:permissions => {"$in" => [JAVASCRIPT_EXTENSION_PERM_CONST]}).distinct(:email)
+
+  puts "This is the number of users that need to be update with the new permissions #{documents.count}\n"
+  users_perm = Array.new
+  documents.each do |email|
+    perm = { :email => email }
+    users_perm.push(perm)
+  end
+
+  result = tmp_js_perm_coll.insert_many(users_perm)
+  if (result.inserted_count != documents.count)
+    raise Exception, "Failed to insert all the users in the ttl temporary collection\n\n"
+  end
+
+end
+
+def createNewPermission(users_coll, permission_coll, tmp_js_perm_coll)
+  puts "Querying get all users that need this new profile Javascript permission\n"
+
+  js_users = Array.new
+  tmp_documents = tmp_js_perm_coll.find
+  puts "Here is the remaining documents for the script to finish #{tmp_documents.count}\n\n"
+  raise Exception, "Failed to get MongoDB records from temporary JS Collection\n" if tmp_documents.count == 0
+  js_users = tmp_documents
+
+  js_users.each do |user|
+    email_user = user[:email]
+    documents = permission_coll.find({ :email => email_user, :permissions => {"$in" => [JAVASCRIPT_EXTENSION_PERM_CONST] }})
+    documents.each do |doc|
+        email = doc.fetch(EMAIL_CONST)
+        profiles_obj = doc.fetch("profiles")
+        account = doc.fetch("account")
+        profiles_obj.each do |profiles|
+          profile = profiles.fetch(0)
+          if "*".eql?(profile)
+            updateStarUsers(users_coll, permission_coll, email, account, profile)
+          else
+            updateUsersPermissions(users_coll, email, account, profile)
+            updatePermissionCache(permission_coll, email, account, profile)
+          end
+        end #closes third loop
       end #closes second loop
-    end #closes first loop
+      tmp_js_perm_coll.delete_one(:email => email_user)
+  end # closes the first loop
 end
 
 def updateStarUsers(users_coll, permission_coll, email, account, profile)
@@ -174,20 +220,27 @@ def getMongoValues(config)
 end
 
 if __FILE__ == $PROGRAM_NAME
+  begin
+    config_location = getCommandArguments
+    config = getConfigFile(config_location)
 
-  config_location = getCommandArguments
-  config = getConfigFile(config_location)
+    mongo_host, mongo_db, users, permission = getMongoValues(config)
 
-  mongo_host, mongo_db, users, permission = getMongoValues(config)
+    puts "Connecting to Mongo #{mongo_db} DB from host #{mongo_host}\n"
+    mongo_client, users_coll, permission_coll = getMongoCoreDB(mongo_host, mongo_db, users, permission)
 
-  puts "Connecting to Mongo #{mongo_db} DB from host #{mongo_host}\n"
-  mongo_client, users_coll, permission_coll = getMongoCoreDB(mongo_host, mongo_db, users, permission)
+    puts "Creating temporary TTL Collection to keep track of all users that have no received the new JS permissions \n"
+    tmp_js_perm_coll = createNewPermissionTTLColl(mongo_client, permission_coll)
 
-  puts "Creating new Profile Level Permission\n"
-  createNewPermission(users_coll, permission_coll)
+    puts "Creating new Profile Level Permission\n"
+    createNewPermission(users_coll, permission_coll, tmp_js_perm_coll)
 
-  puts "Creating new profile permission Script Finish \n"
-  mongo_client.close
+    puts "Creating new profile permission Script Finish \n"
+  ensure
+    puts "Closing MongoDB connection\n"
+    mongo_client.close
+  end
+
   puts "Here is all the super users that the script found \n"
   puts $tealim_super_user
   exit 0
