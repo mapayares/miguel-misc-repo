@@ -107,7 +107,6 @@ def insertFixedPermissions(mongo_client, users_coll, users, permission_type)
       when "create"
         users_permissions.delete("tealium:accounts:*:delete")
     end
-    binding.pry
     users_coll.update_one( { EMAIL_CONST => user}, {"$set" => { :permissions => users_permissions }})
   end
 end
