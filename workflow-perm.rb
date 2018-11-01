@@ -63,50 +63,76 @@ def getUsersPermissionCache(accounts, permission_cache_coll)
   return users_perm_array
 end
 
-def getUsersDbRecord(users_perm_cache_array, users_coll, perm_cache_coll)
-
+def updateUsersWorkFlowPermission(users_perm_cache_array, users_coll, perm_cache_coll)
   users_perm_cache_array.each do | user_record |
 
-    email = user_record.fetch(EMAIL_CONST)
-    account_name = user_record.fetch('account')
+    puts "Iterating through all MongoDB records that have Workflow On \n"
+    user_record.each do | record |
+      email = record.fetch(EMAIL_CONST)
+      account_name = record.fetch('account')
 
-    #next if super_users.contains?(email)
+      next if super_users.contains?(email)
 
-    profiles = user_record.fetch('profiles')
-    workflow_permission_array = Array.new
+      profiles = record.fetch('profiles')
+      user_permission_array, permission_cache_array, profile_name = isPublishProdEnable(profiles, email, account_name)
 
-    profiles.each do | profile |
-      profile_name = profile.fetch('profile')
+      binding.pry
 
-      if ('*'.eql?(profile_name))
-        workflow_permission_array.push('accounts:' + account_name + ':profiles:*:publish_workflow_approval')
-        break
-      else
-        workflow_permission_array.push('accounts:' + account_name + ':profiles:' + profile_name + ':publish_workflow_approval')
-      end
+      updateUserDocument(email, user_permission_array, users_coll)
+      updateUserPermissionCache(email, account_name, profile_name, permission_cache_array, perm_cache_coll)
     end
-
-    insertUserNewWorkFlowPermission(email, workflow_permission_array, users_coll)
-
   end
-
-
 end
 
-def updateUserNewWorkFlowPermission(email, workflow_permission_array, users_coll)
-  puts "Updating user: #{email} document in MongoDB \n"
+def isPublishProdEnable(profiles, email, account_name)
+  user_permission_array = Array.new
+  profile_permissions = Array.new
+  profile_name = String.new
+  profiles.each do | profile |
+    profile_data = profile.pop
+    profile_name = profile_data.fetch('profile')
+    puts "Checking if User: #{email} has the Publish Prod permission for Profile: #{profile_name} \n"
+
+    binding.pry
+
+    profile_permissions = profile_data.fetch('permissions')
+    next unless (profile_permissions.include?(PUBLISH_PROD_CONST))
+
+    profile_permissions.push(WORKFLOW_PERMISION_APPROVAL) unless profile_permissions.include?(WORKFLOW_PERMISION_APPROVAL)
+    if ('*'.eql?(profile_name))
+      user_permission_array.push('tealium:accounts:' + account_name + ':profiles:*:publish_workflow_approval')
+      break
+    else
+      user_permission_array.push('tealium:accounts:' + account_name + ':profiles:' + profile_name + ':publish_workflow_approval')
+    end
+  end
+  return user_permission_array, profile_permissions, profile_name
+end
+
+def updateUserDocument(email, user_permission_array, users_coll)
+  puts "Updating user: #{email} permissions in MongoDB \n"
   begin
-      users_coll.find_one_and_update( { :email => email}, {"$addToSet" => { :permissions => { "$each" => workflow_permission_array}}}, :upsert => false)
+      users_coll.find_one_and_update( { :email => email}, {"$addToSet" => { :permissions => { "$each" => user_permission_array}}}, :upsert => false)
     rescue => e
       puts "FRACASAR: There was an error trying to update user: #{email} for collection: #{users_coll} Error: #{e}\n"
       exit 1
   end
 end
 
+def updateUserPermissionCache(email, account, profile_name, permission_cache_array, permission_coll)
+  puts "Updating user: #{email} permission cache with WorkFlow Permissions \n"
+  begin
+    permission_coll.find_one_and_update( { :email => email, :account => account}, { "$set" => { "profiles.#{profile_name}.permissions" => permission_cache_array}})
+  rescue => e
+    puts "FRACASAR: There was an error trying to update user: #{email} for collection: #{permission_coll} Error: #{e}\n"
+    exit 1
+  end
+end
+
 def addPublishWorkflowPerm(mongo_users_coll, mongo_permission_cache, mongo_client, accounts)
 
-  users_permission_cache_array = getUsersPermissionCache(accounts, mongo_permission_cache)
-  getUsersDbRecord(users_perm_cache_array, mongo_users_coll, mongo_permission_cache)
+  users_perm_cache_array = getUsersPermissionCache(accounts, mongo_permission_cache)
+  updateUsersWorkFlowPermission(users_perm_cache_array, mongo_users_coll, mongo_permission_cache)
 
   mongo_client.close
 
