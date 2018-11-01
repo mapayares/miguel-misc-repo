@@ -1,5 +1,4 @@
 #!/usr/bin/env ruby
-
 require 'json'
 require 'fileutils'
 require 'pry'
@@ -63,7 +62,7 @@ def getUsersPermissionCache(accounts, permission_cache_coll)
   return users_perm_array
 end
 
-def updateUsersWorkFlowPermission(users_perm_cache_array, users_coll, perm_cache_coll)
+def updateUsersWorkFlowPermission(users_perm_cache_array, users_coll, perm_cache_coll, super_users)
   users_perm_cache_array.each do | user_record |
 
     puts "Iterating through all MongoDB records that have Workflow On \n"
@@ -71,7 +70,7 @@ def updateUsersWorkFlowPermission(users_perm_cache_array, users_coll, perm_cache
       email = record.fetch(EMAIL_CONST)
       account_name = record.fetch('account')
 
-      next if super_users.contains?(email)
+      next if super_users.include?(email)
 
       profiles = record.fetch('profiles')
       user_permission_array, permission_cache_array, profile_name = isPublishProdEnable(profiles, email, account_name)
@@ -129,13 +128,11 @@ def updateUserPermissionCache(email, account, profile_name, permission_cache_arr
   end
 end
 
-def addPublishWorkflowPerm(mongo_users_coll, mongo_permission_cache, mongo_client, accounts)
-
-  users_perm_cache_array = getUsersPermissionCache(accounts, mongo_permission_cache)
-  updateUsersWorkFlowPermission(users_perm_cache_array, mongo_users_coll, mongo_permission_cache)
+def addPublishWorkflowPerm(users_coll, permission_cache_coll, mongo_client, accounts, super_users)
+  users_perm_cache_array = getUsersPermissionCache(accounts, permission_cache_coll)
+  updateUsersWorkFlowPermission(users_perm_cache_array, users_coll, permission_cache_coll, super_users)
 
   mongo_client.close
-
 end
 
 #this function will retrieves all the mongo configurations
@@ -145,6 +142,7 @@ def getMongoValues(config)
   mongo_host = config.fetch("mongo_host")
   mongo_db = config.fetch("mongo_db")
   accounts = config.fetch("accounts")
+  super_users = config.fetch("super_users")
 
   raise ArgumentError, "Could not find Permission collection" if collections.empty?
   raise ArgumentError, "Could not find Permission collection" if accounts.empty?
@@ -159,20 +157,20 @@ def getMongoValues(config)
     end
   end
 
-  return mongo_host, mongo_db, users_coll, permission_cache_coll, accounts
+  return mongo_host, mongo_db, users_coll, permission_cache_coll, accounts, super_users
 end
 
 if __FILE__ == $PROGRAM_NAME
   config_location = getCommandArguments
   config = getConfigFile(config_location)
-  mongo_host, mongo_db, users_coll, permission_cache_coll, accounts = getMongoValues(config)
+  mongo_host, mongo_db, users_coll, permission_cache_coll, accounts, super_users = getMongoValues(config)
 
   puts "Connecting to Mongo #{mongo_db} DB from host #{mongo_host}\n"
   mongo_client, mongo_users_collection, mongo_permission_cache = getMongoCoreDBCollections(mongo_host, mongo_db,
     users_coll, permission_cache_coll)
 
   puts "Adding new WorkFlow Permission to Users who have Profile Workflow turn on\n"
-  addPublishWorkflowPerm(mongo_users_collection, mongo_permission_cache, mongo_client, accounts)
+  addPublishWorkflowPerm(mongo_users_collection, mongo_permission_cache, mongo_client, accounts, super_users)
 
   puts "DONE WITH SCRIPT!!!!!!!\n"
   exit 0
