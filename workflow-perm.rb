@@ -65,18 +65,20 @@ end
 def updateUsersWorkFlowPermission(users_perm_cache_array, users_coll, perm_cache_coll, super_users)
   users_perm_cache_array.each do | user_record |
 
+    puts "THESE ARE THE AMOUNT OF RECORDS WE FOUND: #{user_record.count} \n\n"
+
     puts "Iterating through all MongoDB records that have Workflow On \n"
     user_record.each do | record |
       email = record.fetch(EMAIL_CONST)
       account_name = record.fetch('account')
-
       next if super_users.include?(email)
 
+      next unless record.has_key?('profiles')
       profiles = record.fetch('profiles')
+
       user_permission_array, permission_cache_array, profile_name = isPublishProdEnable(profiles, email, account_name)
 
-      binding.pry
-
+      next if profile_name.empty?
       updateUserDocument(email, user_permission_array, users_coll)
       updateUserPermissionCache(email, account_name, profile_name, permission_cache_array, perm_cache_coll)
     end
@@ -89,10 +91,8 @@ def isPublishProdEnable(profiles, email, account_name)
   profile_name = String.new
   profiles.each do | profile |
     profile_data = profile.pop
+    next unless profile_data.has_key?('profile')
     profile_name = profile_data.fetch('profile')
-    puts "Checking if User: #{email} has the Publish Prod permission for Profile: #{profile_name} \n"
-
-    binding.pry
 
     profile_permissions = profile_data.fetch('permissions')
     next unless (profile_permissions.include?(PUBLISH_PROD_CONST))
