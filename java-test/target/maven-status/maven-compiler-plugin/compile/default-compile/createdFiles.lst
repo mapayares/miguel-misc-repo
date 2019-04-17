@@ -1,0 +1,12 @@
+com/messages/models/Messages.class
+com/messages/MessagesRestEndpoints.class
+com/messages/models/UserMessages.class
+com/messages/errors/GeneralErrorMapper.class
+com/messages/app/MessagesApplication.class
+com/messages/StringConstants.class
+com/messages/services/MessageService.class
+com/messages/app/JerseyConfig.class
+com/messages/MessageDao.class
+com/messages/errors/SQLDBErrorMapper.class
+com/messages/security/realm/SecurityRealm.class
+com/messages/errors/SQLDBError.class
