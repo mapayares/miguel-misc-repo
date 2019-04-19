@@ -1,0 +1,11 @@
+-------------------------------------------------------------------------------
+Test set: com.messages.MessageDaoTests
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 1.015 s <<< FAILURE! - in com.messages.MessageDaoTests
+com.messages.MessageDaoTests  Time elapsed: 1.014 s  <<< ERROR!
+org.mockito.exceptions.base.MockitoException: 
+
+Cannot mock/spy class java.lang.String
+Mockito cannot mock/spy because :
+ - Cannot mock wrapper types, String.class or Class.class
+
