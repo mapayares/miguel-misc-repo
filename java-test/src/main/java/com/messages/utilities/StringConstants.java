@@ -18,6 +18,12 @@ public class StringConstants {
 
 	public static final String EMAIL = "email";
 
+	public static final String ERROR = "error";
+
+	public static final String MESSAGE_REPLY_CONTENTS = "message_reply_contents";
+
+	public static final String FOLLOWER = "follower";
+
 	public static final String ISO_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
 
 }

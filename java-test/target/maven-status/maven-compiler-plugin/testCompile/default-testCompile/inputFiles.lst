@@ -1,1 +1,2 @@
-/Users/miguel_laptop/Documents/java-test/src/test/java/com/messages/MessageDaoTests.java
+/Users/miguel_laptop/Documents/java-test/src/test/java/com/messages/unit/MessageServiceTests.java
+/Users/miguel_laptop/Documents/java-test/src/test/java/com/messages/integration/MessageDaoTests.java

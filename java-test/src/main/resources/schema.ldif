@@ -1,0 +1,56 @@
+dn: dc=memorynotfound,dc=com
+objectclass: top
+objectclass: domain
+objectclass: extensibleObject
+dc: memorynotfound
+
+# Organizational Units
+dn: ou=people,dc=memorynotfound,dc=com
+objectclass: top
+objectclass: organizationalUnit
+ou: people
+
+dn: ou=groups,dc=memorynotfound,dc=com
+objectclass: top
+objectclass: organizationalUnit
+ou: groups
+
+# Create Users
+dn: uid=miguel@test.com,ou=people,dc=memorynotfound,dc=com
+objectclass: top
+objectclass: person
+objectclass: organizationalPerson
+objectclass: inetOrgPerson
+cn: miguel@test.com
+sn: miguel
+uid: miguel
+password: password123
+
+dn: uid=test@test.com,ou=people,dc=memorynotfound,dc=com
+objectclass: top
+objectclass: person
+objectclass: organizationalPerson
+objectclass: inetOrgPerson
+cn: test@test.com
+sn: tester
+uid: tester
+password: secret123
+
+dn: uid=intuit@test.com,ou=people,dc=memorynotfound,dc=com
+objectclass: top
+objectclass: person
+objectclass: organizationalPerson
+objectclass: inetOrgPerson
+cn: intuit@test.com
+sn: intuit
+uid: intuit
+password: secret321
+
+# Create Groups
+dn: cn=developers,ou=groups,dc=memorynotfound,dc=com
+objectclass: top
+objectclass: groupOfUniqueNames
+cn: developers
+ou: developer
+uniqueMember: uid=miguel,ou=people,dc=memorynotfound,dc=com
+uniqueMember: uid=intuit,ou=people,dc=memorynotfound,dc=com

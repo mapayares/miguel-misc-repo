@@ -30,11 +30,11 @@ public class UserMessage {
 	@JsonProperty("message_content")
 	private String messageContent;
 
-	@JsonProperty("message_reply")
+	@JsonProperty("message_reply_contents")
 	private List<String> messageReply = new ArrayList<>();
 
 	@JsonProperty("message_id")
-	private long messageId;
+	private String messageId;
 
 	public Date getDate() {
 		return date;
@@ -60,11 +60,11 @@ public class UserMessage {
 		this.messageReply = messageReply;
 	}
 
-	public long getMessageId() {
+	public String getMessageId() {
 		return messageId;
 	}
 
-	public void setMessageId(long messageId) {
+	public void setMessageId(String messageId) {
 		this.messageId = messageId;
 	}
 

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<configuration>
+	<appender name="defaultFileAppender" class="ch.qos.logback.core.ConsoleAppender">
+		<!-- encoders are assigned by default the type ch.qos.logback.classic.encoder.PatternLayoutEncoder -->
+		<encoder>
+			<pattern>%d{ISO8601} %-5p %c{0} - %m%n</pattern>
+		</encoder>
+	</appender>
+	
+	<logger name="com.application" level="DEBUG" >
+	</logger>
+
+	<root level="DEBUG">
+		<appender-ref ref="defaultFileAppender" />
+	</root>
+</configuration>
